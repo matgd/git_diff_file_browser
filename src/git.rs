@@ -1,3 +1,5 @@
+use std::process::Command;
+
 #[derive(Debug)]
 pub struct GitData {
     start_commit: String,
@@ -19,29 +21,27 @@ impl GitData {
         git
     }
 
-    fn grab_diff_files(&mut self) {
-        let output = std::process::Command::new("git")
-            .arg("diff")
-            .arg(&self.start_commit)
-            .arg(&self.end_commit)
-            .arg("--name-only")
-            .output()
-            .expect("Failed to execute `git diff` command.");
+    fn execute_git_diff(&self, flags: Vec<&str>) -> String {
+        let mut command = Command::new("git");
+        command.arg("diff");
+        command.arg(&self.start_commit);
+        command.arg(&self.end_commit);
 
-        let output = String::from_utf8(output.stdout).unwrap();
+        for flag in flags {
+            command.arg(flag);
+        }
+
+        let command_output = command.output().unwrap();
+        String::from_utf8(command_output.stdout).unwrap()
+    }
+
+    fn grab_diff_files(&mut self) {
+        let output = self.execute_git_diff(vec!["--name-only"]);
         self.files = output.lines().map(|s| s.to_string()).collect();
     }
 
     fn grab_diff_stats(&mut self) {
-        let output = std::process::Command::new("git")
-            .arg("diff")
-            .arg(&self.start_commit)
-            .arg(&self.end_commit)
-            .arg("--stat")
-            .output()
-            .expect("Failed to execute `git diff` command.");
-
-        let output = String::from_utf8(output.stdout).unwrap();
+        let output = self.execute_git_diff(vec!["--stat"]);
         self.stats = output;
     }
 }
